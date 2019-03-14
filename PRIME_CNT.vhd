@@ -5,7 +5,7 @@
 --  Project     :
 --  Block       :
 --  Tree        :
---  Designer    : toms74209200
+--  Designer    : toms74209200 <https://github.com/toms74209200>
 --  Created     : 2019/03/14
 --  Copyright   : 2019 toms74209200
 --  License     : MIT License.
@@ -35,12 +35,13 @@ architecture RTL of PRIME_CNT is
 
 -- Parameter --
 constant CalcMax        : std_logic_vector(31 downto 0) := X"05F5_E0FF";    -- Calculation max 99,999,999
+constant PrimeMax       : integer := 1227;                                  -- ROM max prime order
 
 -- Internal signals --
-signal busy_i           : std_logic;                    --(p) Calculation busy
-signal valid_i          : std_logic;                    --(p) Data valid
-signal dat_i            : std_logic_vector(DAT'range);  --(p) Data
-signal cnt_pls          : std_logic_vector(0 to 1227);  --(p) Prime counter pulse
+signal busy_i           : std_logic;                        --(p) Calculation busy
+signal valid_i          : std_logic;                        --(p) Data valid
+signal dat_i            : std_logic_vector(DAT'range);      --(p) Data
+signal cnt_pls          : std_logic_vector(0 to PrimeMax);  --(p) Prime counter pulse
 
 -- Data array --
 type PrimeDatType       is array(0 to 1227) of std_logic_vector(15 downto 0);
@@ -1315,14 +1316,14 @@ process (CLK, nRST) begin
                     ary_prime_cnt(i) <= ary_prime_cnt(i) + 1;
                 end if;
             else
-                ary_prime_cnt(i) <= X"0001";
+                ary_prime_cnt(i) <= (others => '0');
             end if;
         end if;
     end loop;
 end process;
 
 ARY_CNT_PLS : for i in cnt_pls'range generate
-    cnt_pls(i) <= '1' when (ary_prime_cnt(i) = rom_prime(i)) else '0';
+    cnt_pls(i) <= '1' when (ary_prime_cnt(i) = rom_prime(i)-1) else '0';
 end generate;
 
 
@@ -1347,27 +1348,17 @@ end process;
 
 
 -- ***********************************************************
---  Out data
+--  Data
 -- ***********************************************************
-process (CLK, nRST) begin
-    if (nRST = '0') then
-        valid_i <= '0';
-    elsif (CLK'event and CLK = '1') then
-        if (busy_i = '1') then
-            if (cnt_pls = 0) then
-                valid_i <= '1';
-            else
-                valid_i <= '0';
-            end if;
-        else
-            valid_i <= '0';
-        end if;
-    end if;
-end process;
+DAT <= dat_i when (valid_i = '1') else (others => '0');
+
+
+-- ***********************************************************
+--  Data valid
+-- ***********************************************************
+valid_i <= '1' when (busy_i = '1' and cnt_pls = 0) else '0';
 
 VALID <= valid_i;
-
-DAT <= dat_i when (valid_i = '1') else (others => '0');
 
 
 end RTL; --PRIME_CNT
